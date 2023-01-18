@@ -1,0 +1,43 @@
+pragma solidity ^0.8.0;
+
+contract ArbitrageBot {
+    address contract1;
+    address contract2;
+    address owner;
+
+    constructor(address _contract1, address _contract2) public {
+        owner = msg.sender;
+        contract1 = _contract1;
+        contract2 = _contract2;
+    }
+
+    function checkArbitrageOpportunity() public view returns (bool) {
+        // Call the price functions of both contracts
+        uint price1 = IContract1(contract1).getPrice();
+        uint price2 = IContract2(contract2).getPrice();
+
+        // Check if there is an opportunity for arbitrage
+        if (price1 > price2) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    function executeArbitrage() public {
+        require(msg.sender == owner, "Only the owner can execute arbitrage");
+
+        if (checkArbitrageOpportunity()) {
+            // Call the buy function of the cheaper contract
+            IContract2(contract2).buy();
+
+            // Call the sell function of the more expensive contract
+            IContract1(contract1).sell();
+        } else {
+            // No opportunity for arbitrage
+            emit LogNoArbitrageOpportunity();
+        }
+    }
+
+    event LogNoArbitrageOpportunity();
+}
