@@ -41,3 +41,21 @@ contract ArbitrageBot {
 
     event LogNoArbitrageOpportunity();
 }
+
+pragma solidity ^0.8.0;
+
+import "https://github.com/Uniswap/uniswap-v2-periphery/contracts/interfaces/IUniswapV2Router02.sol";
+
+contract UniswapTrader {
+    IUniswapV2Router02 public router;
+
+    constructor(address _router) public {
+        router = IUniswapV2Router02(_router);
+    }
+
+    function trade(address liquidityToken, address destination, uint amountOutMin) public {
+        (bool success, uint[] memory amounts) = router.swapExactTokensForTokens(amountOutMin, amountOutMin, liquidityToken, destination, msg.sender);
+        require(success, "Trade failed");
+    }
+}
+
