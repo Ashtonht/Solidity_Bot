@@ -1,0 +1,40 @@
+pragma solidity ^0.8.0;
+
+contract DexAggregator {
+  address public owner;
+  uint256[] public DEXList;
+
+  constructor() public {
+    owner = msg.sender;
+  }
+
+  function addDex(address newDex) public onlyOwner {
+    DEXList.push(newDex);
+  }
+
+  function trade(uint256 amount, uint256 minReturn) public payable {
+    uint256 bestGasEstimate = 0;
+    address bestDex;
+    uint256 bestReturn = 0;
+    for (uint256 i = 0; i < DEXList.length; i++) {
+      uint256 gasEstimate = DEXList[i].estimateGas.value(amount)("");
+      uint256 returnEstimate = DEXList[i].call.value(amount).gas(gasEstimate)("");
+      if (returnEstimate > bestReturn) {
+        bestGasEstimate = gasEstimate;
+        bestDex = DEXList[i];
+        bestReturn = returnEstimate;
+      }
+    }
+    require(bestDex.call.value(amount).gas(bestGasEstimate)(""), "Trade failed");
+    require(msg.value >= minReturn, "Return not sufficient");
+  }
+
+  function getOwner() public view returns (address) {
+    return owner;
+  }
+
+  modifier onlyOwner() {
+    require(msg.sender == owner, "Only owner can perform this action");
+    _;
+  }
+}
