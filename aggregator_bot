@@ -1,0 +1,19 @@
+pragma solidity ^0.8.0;
+
+contract DexAggregator {
+  address public owner;
+
+  constructor() public {
+    owner = msg.sender;
+  }
+
+  function trade(address dex, uint256 amount, uint256 minReturn) public payable {
+    uint256 gasEstimate = dex.estimateGas.value(amount)("");
+    require(dex.call.value(amount).gas(gasEstimate)(""), "Trade failed");
+    require(msg.value >= minReturn, "Return not sufficient");
+  }
+
+  function getOwner() public view returns (address) {
+    return owner;
+  }
+}
