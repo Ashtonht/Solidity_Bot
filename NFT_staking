@@ -1,0 +1,58 @@
+pragma solidity ^0.8.0;
+
+import "https://github.com/OpenZeppelin/openzeppelin-solidity/contracts/token/ERC721/ERC721.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-solidity/contracts/math/SafeMath.sol";
+
+contract Node is ERC721 {
+  using SafeMath for uint256;
+
+  address public owner;
+  uint256 public initialSupply = 500;
+  uint256 public totalSupply;
+  mapping (address => uint256) public balanceOf;
+  mapping (uint256 => address) public tokenOfOwnerByIndex;
+  uint256 public stakingRewardsDuration = 52 weeks;
+  uint256 public nodeXPerNode = 1000;
+  uint256 public nodeXTotalSupply = 100000;
+  uint256 public nodeXCirculationSupply;
+  uint256 public nodeXStakingRewards;
+
+  event Transfer(address indexed _from, address indexed _to, uint256 _tokenId);
+  event Approval(address indexed _owner, address indexed _approved, uint256 _tokenId);
+
+  constructor() public {
+    owner = msg.sender;
+    totalSupply = initialSupply;
+    nodeXCirculationSupply = nodeXTotalSupply;
+  }
+
+  function mint(address _to, uint256 _amount) public onlyOwner {
+    totalSupply = totalSupply.add(_amount);
+    for (uint256 i = 0; i < _amount; i++) {
+      uint256 newTokenId = totalSupply.sub(i);
+      balanceOf[_to] = balanceOf[_to].add(1);
+      tokenOfOwnerByIndex[balanceOf[_to]] = _to;
+      emit Transfer(address(0), _to, newTokenId);
+    }
+  }
+
+  function swapNodeXForNode(uint256 _nodeXAmount) public {
+    require(_nodeXAmount >= nodeXPerNode, "NodeX amount is insufficient");
+    uint256 nodeAmount = _nodeXAmount.div(nodeXPerNode);
+    address sender = msg.sender;
+    balanceOf[sender] = balanceOf[sender].add(nodeAmount);
+    nodeXCirculationSupply = nodeXCirculationSupply.sub(_nodeXAmount);
+    nodeXStakingRewards = nodeXStakingRewards.add(_nodeXAmount);
+    for (uint256 i = 0; i < nodeAmount; i++) {
+      uint256 newTokenId = totalSupply.add(i);
+      tokenOfOwnerByIndex[balanceOf[sender]] = sender;
+      emit Transfer(address(0), sender, newTokenId);
+    }
+  }
+
+  function stakeNode(uint256 _tokenId) public {
+    address sender = msg.sender;
+    require(tokenOfOwnerByIndex[_tokenId] == sender, "You do not own this token");
+    uint256 stakedNodeX = nodeXStakingRewards.div(nodeXCirculationSupply).mul(_tokenId);
+    nodeXStakingRewards = nodeXStakingRewards.sub(stakedNodeX);
+    // Transfer the stakedNodeX
