@@ -1,0 +1,50 @@
+pragma solidity ^0.8.0;
+
+import "https://github.com/OpenZeppelin/openzeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
+
+contract YieldStrategyBot is SafeERC20 {
+    uint256 public totalSupply;
+    mapping (address => uint256) public balances;
+    address public tokenAddress;
+
+    event NewDeposit(address depositor, uint256 amount);
+    event NewWithdrawal(address withdrawer, uint256 amount);
+    event NewTokenDistribution(address recipient, uint256 amount);
+
+    constructor(address _tokenAddress) public {
+        tokenAddress = _tokenAddress;
+    }
+
+    function deposit() public payable {
+        require(msg.value > 0, "Amount must be greater than zero");
+        balances[msg.sender] += msg.value;
+        totalSupply += msg.value;
+        emit NewDeposit(msg.sender, msg.value);
+    }
+
+    function withdraw(uint256 amount) public {
+        require(amount > 0, "Amount must be greater than zero");
+        require(balances[msg.sender] >= amount, "Insufficient funds");
+        balances[msg.sender] -= amount;
+        totalSupply -= amount;
+        msg.sender.transfer(amount);
+        emit NewWithdrawal(msg.sender, amount);
+    }
+
+    function calculateInterest() public view returns (uint256) {
+        uint256 interest = totalSupply * 0.01;
+        return interest;
+    }
+
+    function distributeInterest() public {
+        uint256 interest = calculateInterest();
+        for (address user in balances) {
+            uint256 userInterest = interest * balances[user] / totalSupply;
+            balances[user] += userInterest;
+            uint256 tokenAmount = userInterest / 100;
+            SafeERC20(tokenAddress).safeTransfer(user, tokenAmount);
+            emit NewTokenDistribution(user, tokenAmount);
+        }
+        totalSupply += interest;
+    }
+}
