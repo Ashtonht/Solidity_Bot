@@ -1,0 +1,46 @@
+pragma solidity ^0.8.0;
+
+interface IUniswap {
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] path,
+        address to,
+        uint256 deadline
+    ) external returns (uint[] memory);
+}
+
+interface ICurve {
+    function swap(uint[] memory amountsOut, uint[] memory amountsIn, uint[] memory poolIds) external returns (uint[] memory);
+}
+
+contract TradingBridge {
+    IUniswap private uniswap;
+    ICurve private curve;
+
+    constructor(IUniswap _uniswap, ICurve _curve) public {
+        uniswap = _uniswap;
+        curve = _curve;
+    }
+
+    function trade(
+        uint256 amountIn,
+        uint256[] memory amountsOut,
+        uint[] memory poolIds,
+        address[] memory path,
+        address to
+    ) external {
+        uint256 amountOutMin = amountsOut[0];
+        uint256 deadline = now + 60 * 60; // set deadline to an hour from now
+
+        uint[] memory result = uniswap.swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline);
+
+        // the first item in the result array is the actual amount of tokens received
+        uint256 amountReceived = result[0];
+
+        // update the amountsOut array with the actual amount received
+        amountsOut[0] = amountReceived;
+
+        curve.swap(amountsOut, [amountIn], poolIds);
+    }
+}
